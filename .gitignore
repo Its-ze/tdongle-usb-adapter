@@ -1,0 +1,21 @@
+.DS_Store
+Thumbs.db
+
+# ESP-IDF build output
+firmware/**/build/
+firmware/**/sdkconfig
+firmware/**/sdkconfig.old
+firmware/**/managed_components/
+
+# Generated site/package output
+site/
+dist/
+*.zip
+
+# Local editor/runtime noise
+.vscode/
+.idea/
+.playwright-cli/
+*.log
+__pycache__/
+*.pyc

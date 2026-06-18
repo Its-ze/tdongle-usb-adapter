@@ -1,0 +1,16 @@
+{
+  "name": "VoidLink T-Dongle USB Adapter",
+  "short_name": "VoidLink",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#060811",
+  "theme_color": "#39f6d7",
+  "icons": [
+    {
+      "src": "assets/voidlink-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "https://its-ze.github.io/deck-marketplace.schema.v1.json",
+  "name": "VoidLink Public Deck Packs",
+  "publisher": "Its-ze",
+  "updated": "2026-06-18",
+  "packs": [
+    {
+      "id": "voidlink.tdongle.usb-adapter",
+      "name": "VoidLink USB Adapter",
+      "version": "0.1.0",
+      "summary": "USB NCM virtual adapter firmware for LilyGO T-Dongle S3.",
+      "pack": "https://its-ze.github.io/tdongle-usb-adapter/deck/voidlink.pack.json",
+      "install": "https://its-ze.github.io/tdongle-usb-adapter/"
+    }
+  ]
+}

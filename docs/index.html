@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VoidLink T-Dongle USB Adapter</title>
+<meta name="theme-color" content="#39f6d7">
+<link rel="manifest" href="site.webmanifest">
+<link rel="icon" href="assets/voidlink-icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</head>
+<body>
+<main class="shell">
+  <header class="hero">
+    <div class="brand">
+      <img class="logo" src="assets/voidlink-icon.svg" alt="">
+      <div>
+        <p class="eyebrow">Public deck pack</p>
+        <h1>VoidLink T-Dongle USB Adapter</h1>
+      </div>
+    </div>
+    <p class="lede">Flash a LilyGO T-Dongle S3 into a USB NCM virtual network adapter for mobile deck control workflows.</p>
+    <div class="actions">
+      <esp-web-install-button id="installButton" manifest="manifest.json">
+        <button slot="activate" class="primary">Connect and flash</button>
+        <span slot="unsupported">Use Chrome or Edge with Web Serial enabled.</span>
+        <span slot="not-allowed">Serial access was blocked. Reload and allow the browser prompt.</span>
+      </esp-web-install-button>
+      <a class="secondary" href="deck/marketplace-index.json">Deck marketplace JSON</a>
+    </div>
+  </header>
+
+  <section class="grid">
+    <article class="panel">
+      <p class="eyebrow">Adapter mode</p>
+      <h2>USB NCM</h2>
+      <p>The laptop should see the flashed dongle as a USB Ethernet-style adapter using the host CDC-NCM driver.</p>
+      <dl class="stats">
+        <div><dt>Chip</dt><dd>ESP32-S3</dd></div>
+        <div><dt>Board</dt><dd>T-Dongle S3</dd></div>
+        <div><dt>Driver</dt><dd>cdc_ncm</dd></div>
+      </dl>
+    </article>
+
+    <article class="panel">
+      <p class="eyebrow">Deck install</p>
+      <h2>External pack</h2>
+      <p>Add the marketplace index URL to the deck to pull this pack without editing built-in app lists.</p>
+      <pre id="marketUrl">loading...</pre>
+    </article>
+
+    <article class="panel wide">
+      <p class="eyebrow">Build bundle</p>
+      <h2 id="bundleTitle">Loading manifest</h2>
+      <ol id="flashMap"></ol>
+      <div id="fileList" class="files"></div>
+      <pre id="console">waiting for installer...</pre>
+    </article>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

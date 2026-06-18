@@ -1,0 +1,24 @@
+{
+  "name": "VoidLink T-Dongle USB Adapter",
+  "version": "0.1.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        {
+          "offset": 0,
+          "path": "firmware/voidlink-ncm-adapter-0.1.0/bootloader.bin"
+        },
+        {
+          "offset": 32768,
+          "path": "firmware/voidlink-ncm-adapter-0.1.0/partitions.bin"
+        },
+        {
+          "offset": 65536,
+          "path": "firmware/voidlink-ncm-adapter-0.1.0/firmware.bin"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "https://its-ze.github.io/deck-pack.schema.v1.json",
+  "id": "voidlink.tdongle.usb-adapter",
+  "name": "VoidLink USB Adapter",
+  "version": "0.1.0",
+  "visibility": "public",
+  "publisher": "Its-ze",
+  "summary": "Turns a LilyGO T-Dongle S3 into a USB NCM virtual network adapter for deck control workflows.",
+  "hardware": [
+    "LilyGO T-Dongle S3",
+    "ESP32-S3 native USB boards"
+  ],
+  "repo": "https://github.com/Its-ze/tdongle-usb-adapter",
+  "homepage": "https://its-ze.github.io/tdongle-usb-adapter/",
+  "license": "MIT",
+  "tags": [
+    "tdongle",
+    "esp32-s3",
+    "usb-ncm",
+    "virtual-adapter",
+    "deck-control"
+  ],
+  "install": {
+    "type": "esp-web-tools",
+    "chipFamily": "ESP32-S3",
+    "title": "Flash VoidLink T-Dongle USB Adapter",
+    "url": "https://its-ze.github.io/tdongle-usb-adapter/",
+    "manifest": "https://its-ze.github.io/tdongle-usb-adapter/manifest.json",
+    "warning": "Flashing overwrites the firmware currently on the plugged-in dongle."
+  },
+  "deck": {
+    "marketplace": {
+      "category": "Network",
+      "accent": "#39f6d7",
+      "requiresBackupPrompt": true
+    },
+    "apps": [
+      {
+        "id": "voidlink_adapter",
+        "label": "VoidLink Adapter",
+        "shortLabel": "VoidLink",
+        "group": "Network",
+        "status": "experimental",
+        "transport": "usb-ncm",
+        "actions": [
+          "adapter.flash",
+          "adapter.status",
+          "adapter.host-route",
+          "deck.remote-open",
+          "deck.discovery"
+        ],
+        "description": "External pack for the T-Dongle USB NCM virtual adapter build."
+      }
+    ]
+  },
+  "host": {
+    "linux": {
+      "deviceHints": [
+        "nmcli device status",
+        "ip link",
+        "journalctl -k -g cdc_ncm"
+      ],
+      "expectedDriver": "cdc_ncm"
+    },
+    "windows": {
+      "deviceHints": [
+        "Device Manager -> Network adapters",
+        "Get-NetAdapter | Where-Object InterfaceDescription -match 'NCM|CDC'"
+      ],
+      "expectedDriver": "USB NCM compatible network adapter"
+    }
+  }
+}
