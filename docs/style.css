@@ -120,6 +120,18 @@ a.secondary {
   background: rgba(16, 22, 37, .78);
 }
 
+.pair-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 0;
+}
+
+.pair-buttons button {
+  border-color: rgba(57, 246, 215, .45);
+  background: rgba(6, 8, 17, .7);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -218,6 +230,7 @@ ol {
   }
 
   .grid,
+  .pair-buttons,
   .stats {
     grid-template-columns: 1fr;
   }

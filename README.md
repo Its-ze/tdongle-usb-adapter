@@ -4,6 +4,8 @@ VoidLink is a separate public firmware/install project for turning a LilyGO T-Do
 
 The first firmware target is an ESP32-S3 USB NCM adapter. When flashed, the dongle enumerates on Linux/Windows as a USB Ethernet-style interface instead of only a serial device. The initial adapter mode bridges the host USB network side to a configured Wi-Fi STA side, which gives the laptop a real virtual adapter path for deck control workflows.
 
+Pairing/control is still handled by the CyberDeck Link control-unit firmware and its local web UI at `http://192.168.4.1/`. VoidLink is the separate USB network-card build; use the CyberDeck Link build when you want the T-Dongle screen status UI, pairing workflow, send/receive queue, and T-Deck settings/profile sync.
+
 ## Status
 
 - Project name: `VoidLink T-Dongle USB Adapter`

@@ -4,6 +4,8 @@ const fileList = document.getElementById("fileList");
 const consoleEl = document.getElementById("console");
 const marketUrl = document.getElementById("marketUrl");
 const installButton = document.getElementById("installButton");
+const checkPairing = document.getElementById("checkPairing");
+const pairingStatus = document.getElementById("pairingStatus");
 
 const marketplaceUrl = new URL("deck/marketplace-index.json", window.location.href).href;
 marketUrl.textContent = marketplaceUrl;
@@ -52,6 +54,29 @@ async function loadBuild() {
 
 installButton?.addEventListener("click", () => {
   writeConsole("installer opened; select the T-Dongle S3 serial/bootloader port");
+});
+
+checkPairing?.addEventListener("click", async () => {
+  pairingStatus.textContent = "checking http://192.168.4.1/api/status ...";
+  try {
+    const response = await fetch("http://192.168.4.1/api/status", { cache: "no-store" });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    const status = await response.json();
+    const paired = status.lifecycle?.paired ? "paired" : "not paired";
+    pairingStatus.textContent = [
+      `reachable: ${status.name || "CyberDeck-Dongle"} ${status.version || ""}`,
+      `pairing: ${paired}`,
+      `display: ${status.displayState || "unknown"}`,
+      "next: use Begin Pair, confirm on the T-Deck, then Save Profile"
+    ].join("\n");
+  } catch (error) {
+    pairingStatus.textContent = [
+      "not reachable",
+      "connect to CyberDeck-Link or the dongle network adapter first",
+      "open: http://192.168.4.1/",
+      `error: ${error.message || "request failed"}`
+    ].join("\n");
+  }
 });
 
 consoleEl.textContent = "installer console ready";
