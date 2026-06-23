@@ -1,3 +1,5 @@
 dependencies:
   chegewara/usb-netif:
     version: "^0.1.0"
+  espressif/esp_tinyusb:
+    version: "^1.7.6"
