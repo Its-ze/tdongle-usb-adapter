@@ -35,7 +35,7 @@ jobs:
           python3 tools/package_site.py \
             --build-dir firmware/voidlink-ncm-adapter/build \
             --site-dir site \
-            --version 0.1.0
+            --version 0.2.0
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

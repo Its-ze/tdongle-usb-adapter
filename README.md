@@ -2,9 +2,9 @@
 
 VoidLink is a separate public firmware/install project for turning a LilyGO T-Dongle S3 into a USB network adapter for deck work. It does not modify the existing NightGrid Cyberdeck, T-Deck Cyberdeck, or T-Dongle control-unit folders.
 
-The first firmware target is an ESP32-S3 USB NCM adapter. When flashed, the dongle enumerates on Linux/Windows as a USB Ethernet-style interface instead of only a serial device. The initial adapter mode bridges the host USB network side to a configured Wi-Fi STA side, which gives the laptop a real virtual adapter path for deck control workflows.
+The firmware target is an ESP32-S3 USB NCM adapter with a host-facing pairing web UI. When flashed, the dongle enumerates on Linux/Windows as a USB Ethernet-style interface instead of only a serial device, gives the computer an address over DHCP, and serves the pairing page at `http://192.168.4.1/`.
 
-Pairing/control is still handled by the CyberDeck Link control-unit firmware and its local web UI at `http://192.168.4.1/`. VoidLink is the separate USB network-card build; use the CyberDeck Link build when you want the T-Dongle screen status UI, pairing workflow, send/receive queue, and T-Deck settings/profile sync.
+VoidLink is the separate USB network-card build. Use this build when you want the computer to reach the T-Dongle through the USB network adapter and open the pairing/control page locally.
 
 ## Status
 
@@ -43,11 +43,11 @@ idf.py menuconfig
 idf.py build
 ```
 
-Set the Wi-Fi SSID/password under `VoidLink Adapter` in `menuconfig`. Then package the web installer files:
+Then package the web installer files:
 
 ```powershell
 cd "F:\Dropbox\Dev Ops\T-Dongle USB Adapter"
-python .\tools\package_site.py --build-dir .\firmware\voidlink-ncm-adapter\build --site-dir .\site --version 0.1.0
+python .\tools\package_site.py --build-dir .\firmware\voidlink-ncm-adapter\build --site-dir .\site --version 0.2.0
 ```
 
 ## Linux Host Notes
@@ -59,8 +59,18 @@ nmcli device status
 ip link
 ```
 
-If the upstream Wi-Fi connection in the dongle is configured and associated, the host interface should receive network service through the USB NCM link.
+The host interface should receive an address from the dongle. Open:
+
+```text
+http://192.168.4.1/
+```
+
+Expected status endpoint:
+
+```text
+http://192.168.4.1/api/status
+```
 
 ## Source Basis
 
-The firmware scaffold follows Espressif's supported ESP32-S3 TinyUSB device stack and the official `tusb_ncm` USB Network Control Model example. The local files are kept small and project-specific so the adapter can evolve into deck pairing/control without touching the older builds.
+The firmware scaffold uses the ESP32-S3 TinyUSB device stack plus the `usb-netif` component so the dongle can run DHCP and HTTP directly over the USB network link. The local files are kept small and project-specific so the adapter can evolve into deck pairing/control without touching the older builds.

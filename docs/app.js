@@ -57,23 +57,26 @@ installButton?.addEventListener("click", () => {
 });
 
 checkPairing?.addEventListener("click", async () => {
-  pairingStatus.textContent = "checking http://192.168.4.1/api/status ...";
+  pairingStatus.textContent = "checking VoidLink at http://192.168.4.1/api/status ...";
   try {
     const response = await fetch("http://192.168.4.1/api/status", { cache: "no-store" });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     const status = await response.json();
     const paired = status.lifecycle?.paired ? "paired" : "not paired";
     pairingStatus.textContent = [
-      `reachable: ${status.name || "CyberDeck-Dongle"} ${status.version || ""}`,
+      `reachable: ${status.name || "VoidLink"} ${status.version || ""}`,
+      `mode: ${status.mode || "unknown"}`,
+      `url: ${status.url || "http://192.168.4.1/"}`,
       `pairing: ${paired}`,
       `display: ${status.displayState || "unknown"}`,
-      "next: use Begin Pair, confirm on the T-Deck, then Save Profile"
+      `next: ${status.nextAction || "open the local pairing UI"}`
     ].join("\n");
   } catch (error) {
     pairingStatus.textContent = [
       "not reachable",
-      "connect to CyberDeck-Link or the dongle network adapter first",
+      "wait for the USB network adapter to finish connecting",
       "open: http://192.168.4.1/",
+      "note: some browsers block HTTPS pages from checking local HTTP directly; opening the link is the real test",
       `error: ${error.message || "request failed"}`
     ].join("\n");
   }

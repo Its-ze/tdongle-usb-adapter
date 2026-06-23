@@ -90,7 +90,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--build-dir", type=Path, required=True)
     parser.add_argument("--site-dir", type=Path, required=True)
-    parser.add_argument("--version", default="0.1.0")
+    parser.add_argument("--version", default="0.2.0")
     args = parser.parse_args()
 
     build_dir = args.build_dir.resolve()

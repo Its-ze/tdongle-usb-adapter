@@ -20,7 +20,7 @@
         <h1>VoidLink T-Dongle USB Adapter</h1>
       </div>
     </div>
-    <p class="lede">Flash a LilyGO T-Dongle S3 into a USB NCM virtual network adapter for mobile deck control workflows.</p>
+    <p class="lede">Flash a LilyGO T-Dongle S3 into a USB NCM virtual network adapter that serves the pairing page to the computer at 192.168.4.1.</p>
     <div class="actions">
       <esp-web-install-button id="installButton" manifest="manifest.json">
         <button slot="activate" class="primary">Connect and flash</button>
@@ -35,11 +35,11 @@
     <article class="panel">
       <p class="eyebrow">Adapter mode</p>
       <h2>USB NCM</h2>
-      <p>The laptop should see the flashed dongle as a USB Ethernet-style adapter using the host CDC-NCM driver.</p>
+      <p>The laptop should see the flashed dongle as a USB Ethernet-style adapter using the host CDC-NCM driver. The dongle assigns the host an address and serves the local pairing UI.</p>
       <dl class="stats">
         <div><dt>Chip</dt><dd>ESP32-S3</dd></div>
         <div><dt>Board</dt><dd>T-Dongle S3</dd></div>
-        <div><dt>Driver</dt><dd>cdc_ncm</dd></div>
+        <div><dt>Open</dt><dd>192.168.4.1</dd></div>
       </dl>
     </article>
 
@@ -53,7 +53,7 @@
     <article class="panel">
       <p class="eyebrow">Pairing console</p>
       <h2>T-Deck bridge</h2>
-      <p>For pairing, plug in the T-Dongle running CyberDeck Link, join its bridge, then open the local web UI. That UI handles pair, send, receive, and settings save commands for the T-Deck.</p>
+      <p>For pairing, plug in the T-Dongle running VoidLink, wait for the USB network adapter, then open the local web UI. That UI handles pair state and bridge readiness from the dongle side.</p>
       <div class="pair-buttons">
         <a class="secondary" href="http://192.168.4.1/" target="_blank" rel="noreferrer">Open pairing UI</a>
         <button id="checkPairing" type="button">Check local UI</button>

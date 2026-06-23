@@ -1,21 +1,10 @@
 menu "VoidLink Adapter"
 
-config VOIDLINK_WIFI_SSID
-    string "Wi-Fi SSID"
-    default ""
-    help
-        Wi-Fi network that the T-Dongle uses as the upstream deck/control network.
-
-config VOIDLINK_WIFI_PASSWORD
-    string "Wi-Fi password"
-    default ""
-    help
-        Password for the configured Wi-Fi network. Leave empty for an open network.
-
-config VOIDLINK_AUTO_RECONNECT
-    bool "Reconnect Wi-Fi automatically"
+config VOIDLINK_ENABLE_PAIRING_UI
+    bool "Enable host-facing USB pairing UI"
     default y
     help
-        Keep trying to reconnect when the upstream Wi-Fi drops.
+        Starts the DHCP-backed USB NCM interface and the local web UI at
+        http://192.168.4.1/ for pairing/control workflows.
 
 endmenu

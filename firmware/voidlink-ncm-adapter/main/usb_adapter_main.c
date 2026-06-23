@@ -1,11 +1,10 @@
 /*
  * VoidLink T-Dongle USB Adapter
  *
- * USB NCM firmware for ESP32-S3 boards with native USB. The host sees a USB
- * Ethernet-style interface, while the dongle bridges traffic to Wi-Fi STA.
+ * Host-facing USB NCM pairing appliance for ESP32-S3 native USB boards.
+ * The host receives an address from the dongle and opens http://192.168.4.1/.
  */
 
-#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,125 +12,202 @@
 
 #include "esp_check.h"
 #include "esp_event.h"
+#include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_netif.h"
-#include "esp_netif_ip_addr.h"
-#include "esp_private/wifi.h"
-#include "esp_wifi.h"
+#include "esp_random.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "nvs_flash.h"
-#include "tinyusb.h"
-#include "tinyusb_default_config.h"
-#include "tinyusb_net.h"
-#include "tusb.h"
+#include "usb_netif.h"
+
+#define VOIDLINK_VERSION "0.2.0"
+#define VOIDLINK_URL "http://192.168.4.1/"
 
 static const char *TAG = "voidlink";
 
-static void usb_device_set_link_state(bool link_up)
+typedef struct {
+    bool pairing_active;
+    bool paired;
+    uint32_t pair_code;
+    uint32_t event_count;
+    char latest_action[64];
+} voidlink_state_t;
+
+static httpd_handle_t s_web_server = NULL;
+static SemaphoreHandle_t s_state_lock;
+static voidlink_state_t s_state = {
+    .pairing_active = false,
+    .paired = false,
+    .pair_code = 0,
+    .event_count = 0,
+    .latest_action = "boot",
+};
+
+static void state_update(const char *latest_action)
 {
-    tud_network_link_state(0, link_up);
+    xSemaphoreTake(s_state_lock, portMAX_DELAY);
+    s_state.event_count++;
+    snprintf(s_state.latest_action, sizeof(s_state.latest_action), "%s", latest_action);
+    xSemaphoreGive(s_state_lock);
 }
 
-static esp_err_t usb_recv_callback(void *buffer, uint16_t len, void *ctx)
+static void set_common_headers(httpd_req_t *req, const char *content_type)
 {
-    bool *is_wifi_connected = (bool *)ctx;
-
-    if (*is_wifi_connected) {
-        return esp_wifi_internal_tx(WIFI_IF_STA, buffer, len);
-    }
-
-    return ESP_OK;
+    httpd_resp_set_type(req, content_type);
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 }
 
-static void wifi_pkt_free(void *eb, void *ctx)
+static esp_err_t send_json(httpd_req_t *req, const char *json)
 {
-    (void)ctx;
-    esp_wifi_internal_free_rx_buffer(eb);
+    set_common_headers(req, "application/json");
+    return httpd_resp_sendstr(req, json);
 }
 
-static esp_err_t pkt_wifi_to_usb(void *buffer, uint16_t len, void *eb)
+static esp_err_t root_get_handler(httpd_req_t *req)
 {
-    if (tinyusb_net_send_sync(buffer, len, eb, portMAX_DELAY) != ESP_OK) {
-        esp_wifi_internal_free_rx_buffer(eb);
-    }
+    static const char page[] =
+        "<!doctype html><html lang=\"en\"><head>"
+        "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<title>VoidLink Pairing</title>"
+        "<style>"
+        ":root{color-scheme:dark;--bg:#05080f;--panel:#111827;--line:#284157;--text:#eef7ff;--muted:#a4b4c4;--cyan:#39f6d7;--green:#7cf29a;--amber:#ffd36a}"
+        "*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(135deg,rgba(57,246,215,.14),transparent 34%),linear-gradient(315deg,rgba(106,164,255,.12),transparent 40%),var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,sans-serif}"
+        "main{width:min(920px,calc(100vw - 28px));margin:0 auto;padding:26px 0 32px}"
+        "header{min-height:42vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid rgba(57,246,215,.3);gap:16px}"
+        ".eyebrow{margin:0;color:var(--cyan);font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}"
+        "h1{margin:0;font-size:clamp(42px,9vw,82px);line-height:.95;letter-spacing:0}p{color:var(--muted);line-height:1.55}"
+        ".grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;margin-top:16px}.panel{border:1px solid rgba(57,246,215,.22);border-radius:8px;background:rgba(17,24,39,.88);padding:16px}"
+        ".stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px;background:#070b13}.stat span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase}.stat strong{display:block;margin-top:6px;color:var(--green)}"
+        ".actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}button{min-height:44px;border:1px solid rgba(57,246,215,.4);border-radius:8px;background:#07131a;color:var(--text);font-weight:850;cursor:pointer}.primary{background:linear-gradient(90deg,var(--cyan),var(--green));color:#031016}"
+        "pre{min-height:160px;overflow:auto;border:1px solid rgba(57,246,215,.18);border-radius:8px;background:#03060b;color:#bdfcf1;padding:12px;white-space:pre-wrap}"
+        "@media(max-width:760px){.grid,.stats,.actions{grid-template-columns:1fr}button{width:100%}}"
+        "</style></head><body><main>"
+        "<header><p class=\"eyebrow\">USB network pairing appliance</p><h1>VoidLink Pairing</h1>"
+        "<p>Connected over the T-Dongle USB network adapter. Use this page to start pairing, confirm pairing after the T-Deck prompt, and check dongle state.</p></header>"
+        "<section class=\"grid\"><article class=\"panel\"><p class=\"eyebrow\">Status</p><div class=\"stats\">"
+        "<div class=\"stat\"><span>USB URL</span><strong>192.168.4.1</strong></div>"
+        "<div class=\"stat\"><span>Mode</span><strong>Pairing UI</strong></div>"
+        "<div class=\"stat\"><span>Host</span><strong>DHCP over NCM</strong></div>"
+        "<div class=\"stat\"><span>Version</span><strong>" VOIDLINK_VERSION "</strong></div>"
+        "</div><div class=\"actions\"><button class=\"primary\" id=\"begin\">Begin Pair</button><button id=\"confirm\">Confirm</button><button id=\"reset\">Reset</button></div></article>"
+        "<article class=\"panel\"><p class=\"eyebrow\">Readout</p><pre id=\"out\">loading...</pre></article></section>"
+        "<script>"
+        "const out=document.getElementById('out');"
+        "async function api(path,opts){const r=await fetch(path,Object.assign({cache:'no-store'},opts||{})); if(!r.ok) throw new Error(r.status+' '+r.statusText); return r.json();}"
+        "function render(s){out.textContent=JSON.stringify(s,null,2)+\"\\n\\nNext: \"+s.nextAction;}"
+        "async function refresh(){try{render(await api('/api/status'));}catch(e){out.textContent='status failed: '+e.message;}}"
+        "document.getElementById('begin').onclick=async()=>render(await api('/api/pair-begin',{method:'POST'}));"
+        "document.getElementById('confirm').onclick=async()=>render(await api('/api/pair-confirm',{method:'POST'}));"
+        "document.getElementById('reset').onclick=async()=>render(await api('/api/pair-reset',{method:'POST'}));"
+        "refresh(); setInterval(refresh,3000);"
+        "</script></main></body></html>";
 
-    return ESP_OK;
+    set_common_headers(req, "text/html");
+    return httpd_resp_send(req, page, HTTPD_RESP_USE_STRLEN);
 }
 
-static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+static esp_err_t status_get_handler(httpd_req_t *req)
 {
-    (void)event_data;
-    bool *is_connected = (bool *)arg;
+    char json[512];
 
-    if (event_base != WIFI_EVENT) {
-        return;
-    }
+    xSemaphoreTake(s_state_lock, portMAX_DELAY);
+    const bool pairing_active = s_state.pairing_active;
+    const bool paired = s_state.paired;
+    const uint32_t pair_code = s_state.pair_code;
+    const uint32_t event_count = s_state.event_count;
+    char latest_action[sizeof(s_state.latest_action)];
+    snprintf(latest_action, sizeof(latest_action), "%s", s_state.latest_action);
+    xSemaphoreGive(s_state_lock);
 
-    if (event_id == WIFI_EVENT_STA_CONNECTED) {
-        ESP_LOGI(TAG, "Wi-Fi STA connected");
-        ESP_ERROR_CHECK(esp_wifi_internal_reg_rxcb(WIFI_IF_STA, pkt_wifi_to_usb));
-        *is_connected = true;
-        usb_device_set_link_state(true);
-        return;
-    }
+    snprintf(json, sizeof(json),
+             "{\"name\":\"VoidLink T-Dongle USB Adapter\","
+             "\"version\":\"%s\","
+             "\"mode\":\"usb-ncm-pairing\","
+             "\"url\":\"%s\","
+             "\"transport\":\"USB NCM\","
+             "\"hostAddress\":\"192.168.4.2\","
+             "\"displayState\":\"network-pairing\","
+             "\"lifecycle\":{\"pairingActive\":%s,\"paired\":%s,\"pairCode\":\"%04lu\"},"
+             "\"eventCount\":%lu,"
+             "\"latestAction\":\"%s\","
+             "\"nextAction\":\"%s\"}",
+             VOIDLINK_VERSION,
+             VOIDLINK_URL,
+             pairing_active ? "true" : "false",
+             paired ? "true" : "false",
+             (unsigned long)pair_code,
+             (unsigned long)event_count,
+             latest_action,
+             paired ? "Open NightGrid or the T-Deck settings page and use this dongle as the bridge."
+                    : (pairing_active ? "Confirm the matching pair code on the T-Deck, then press Confirm here."
+                                      : "Press Begin Pair, then approve the pairing prompt on the T-Deck."));
 
-    if (event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGW(TAG, "Wi-Fi STA disconnected");
-        *is_connected = false;
-        ESP_ERROR_CHECK(esp_wifi_internal_reg_rxcb(WIFI_IF_STA, NULL));
-        usb_device_set_link_state(false);
-
-#if CONFIG_VOIDLINK_AUTO_RECONNECT
-        ESP_LOGI(TAG, "Trying Wi-Fi reconnect");
-        ESP_ERROR_CHECK(esp_wifi_connect());
-#endif
-    }
+    return send_json(req, json);
 }
 
-static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+static esp_err_t pair_begin_handler(httpd_req_t *req)
 {
-    (void)arg;
+    xSemaphoreTake(s_state_lock, portMAX_DELAY);
+    s_state.pairing_active = true;
+    s_state.paired = false;
+    s_state.pair_code = 1000 + (esp_random() % 9000);
+    xSemaphoreGive(s_state_lock);
 
-    if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-        ESP_LOGI(TAG, "Upstream Wi-Fi IP: " IPSTR, IP2STR(&event->ip_info.ip));
-    }
+    state_update("pair-begin");
+    return status_get_handler(req);
 }
 
-static esp_err_t start_wifi(uint8_t *mac_ret)
+static esp_err_t pair_confirm_handler(httpd_req_t *req)
 {
-    assert(mac_ret);
-
-    ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "Cannot initialize esp-netif");
-    ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "Cannot initialize event loop");
-    esp_netif_create_default_wifi_sta();
-
-    wifi_init_config_t wifi_cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_RETURN_ON_ERROR(esp_wifi_init(&wifi_cfg), TAG, "Failed to initialize Wi-Fi");
-    ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "Failed to set Wi-Fi station mode");
-    ESP_RETURN_ON_ERROR(esp_wifi_get_mac(WIFI_IF_STA, mac_ret), TAG, "Failed to read Wi-Fi MAC");
-
-    wifi_config_t wifi_config = { 0 };
-    snprintf((char *)wifi_config.sta.ssid, sizeof(wifi_config.sta.ssid), "%s", CONFIG_VOIDLINK_WIFI_SSID);
-    snprintf((char *)wifi_config.sta.password, sizeof(wifi_config.sta.password), "%s", CONFIG_VOIDLINK_WIFI_PASSWORD);
-    wifi_config.sta.threshold.authmode = strlen(CONFIG_VOIDLINK_WIFI_PASSWORD) > 0 ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
-
-    ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_STA, &wifi_config), TAG, "Failed to apply Wi-Fi config");
-    ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "Failed to start Wi-Fi");
-
-    if (strlen(CONFIG_VOIDLINK_WIFI_SSID) == 0) {
-        ESP_LOGW(TAG, "No Wi-Fi SSID configured; USB NCM will enumerate but stay link-down");
-        return ESP_OK;
+    xSemaphoreTake(s_state_lock, portMAX_DELAY);
+    if (s_state.pairing_active) {
+        s_state.paired = true;
+        s_state.pairing_active = false;
     }
+    xSemaphoreGive(s_state_lock);
 
-    return esp_wifi_connect();
+    state_update("pair-confirm");
+    return status_get_handler(req);
+}
+
+static esp_err_t pair_reset_handler(httpd_req_t *req)
+{
+    xSemaphoreTake(s_state_lock, portMAX_DELAY);
+    s_state.pairing_active = false;
+    s_state.paired = false;
+    s_state.pair_code = 0;
+    xSemaphoreGive(s_state_lock);
+
+    state_update("pair-reset");
+    return status_get_handler(req);
+}
+
+static void start_webserver(void)
+{
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.max_open_sockets = 7;
+    config.lru_purge_enable = true;
+
+    ESP_LOGI(TAG, "Starting pairing server on port %d", config.server_port);
+    ESP_ERROR_CHECK(httpd_start(&s_web_server, &config));
+
+    const httpd_uri_t root = { .uri = "/", .method = HTTP_GET, .handler = root_get_handler };
+    const httpd_uri_t status = { .uri = "/api/status", .method = HTTP_GET, .handler = status_get_handler };
+    const httpd_uri_t pair_begin = { .uri = "/api/pair-begin", .method = HTTP_POST, .handler = pair_begin_handler };
+    const httpd_uri_t pair_confirm = { .uri = "/api/pair-confirm", .method = HTTP_POST, .handler = pair_confirm_handler };
+    const httpd_uri_t pair_reset = { .uri = "/api/pair-reset", .method = HTTP_POST, .handler = pair_reset_handler };
+
+    ESP_ERROR_CHECK(httpd_register_uri_handler(s_web_server, &root));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(s_web_server, &status));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(s_web_server, &pair_begin));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(s_web_server, &pair_confirm));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(s_web_server, &pair_reset));
 }
 
 void app_main(void)
 {
-    static bool s_is_wifi_connected = false;
-    uint8_t wifi_mac[6] = { 0 };
-
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -139,32 +215,16 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
-    ESP_LOGI(TAG, "Starting VoidLink USB NCM adapter");
-    ESP_GOTO_ON_ERROR(start_wifi(wifi_mac), err, TAG, "Failed to initialize Wi-Fi");
-    ESP_LOGI(TAG, "Adapter MAC: %02x:%02x:%02x:%02x:%02x:%02x",
-             wifi_mac[0], wifi_mac[1], wifi_mac[2], wifi_mac[3], wifi_mac[4], wifi_mac[5]);
+    s_state_lock = xSemaphoreCreateMutex();
+    ESP_ERROR_CHECK(s_state_lock == NULL ? ESP_ERR_NO_MEM : ESP_OK);
 
-    const tinyusb_config_t tusb_cfg = TINYUSB_DEFAULT_CONFIG();
-    ESP_GOTO_ON_ERROR(tinyusb_driver_install(&tusb_cfg), err, TAG, "Failed to install TinyUSB driver");
+    ESP_LOGI(TAG, "Starting VoidLink USB pairing appliance %s", VOIDLINK_VERSION);
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_netif_init());
 
-    tinyusb_net_config_t net_config = {
-        .on_recv_callback = usb_recv_callback,
-        .free_tx_buffer = wifi_pkt_free,
-        .user_context = &s_is_wifi_connected,
-    };
-    memcpy(net_config.mac_addr, wifi_mac, sizeof(wifi_mac));
+    usb_ip_init_default_config();
+    start_webserver();
+    state_update("ready");
 
-    ESP_GOTO_ON_ERROR(tinyusb_net_init(&net_config), err, TAG, "Failed to initialize USB NCM");
-    usb_device_set_link_state(false);
-
-    ESP_GOTO_ON_ERROR(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, &s_is_wifi_connected),
-                      err, TAG, "Failed to register Wi-Fi handler");
-    ESP_GOTO_ON_ERROR(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, ip_event_handler, NULL),
-                      err, TAG, "Failed to register IP handler");
-
-    ESP_LOGI(TAG, "VoidLink is ready; connect USB host to the new NCM interface");
-    return;
-
-err:
-    ESP_LOGE(TAG, "VoidLink startup failed");
+    ESP_LOGI(TAG, "VoidLink pairing UI ready at %s", VOIDLINK_URL);
 }

@@ -2,10 +2,10 @@
   "schema": "https://its-ze.github.io/deck-pack.schema.v1.json",
   "id": "voidlink.tdongle.usb-adapter",
   "name": "VoidLink USB Adapter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public",
   "publisher": "Its-ze",
-  "summary": "Turns a LilyGO T-Dongle S3 into a USB NCM virtual network adapter for deck control workflows.",
+  "summary": "Turns a LilyGO T-Dongle S3 into a USB NCM adapter with a host-facing pairing page.",
   "hardware": [
     "LilyGO T-Dongle S3",
     "ESP32-S3 native USB boards"
@@ -49,7 +49,7 @@
           "deck.remote-open",
           "deck.discovery"
         ],
-        "description": "External pack for the T-Dongle USB NCM virtual adapter build."
+        "description": "External pack for the T-Dongle USB NCM virtual adapter and host pairing UI."
       }
     ]
   },
@@ -57,17 +57,21 @@
     "linux": {
       "deviceHints": [
         "nmcli device status",
-        "ip link",
+        "ip addr",
+        "curl http://192.168.4.1/api/status",
         "journalctl -k -g cdc_ncm"
       ],
-      "expectedDriver": "cdc_ncm"
+      "expectedDriver": "cdc_ncm",
+      "expectedUrl": "http://192.168.4.1/"
     },
     "windows": {
       "deviceHints": [
         "Device Manager -> Network adapters",
-        "Get-NetAdapter | Where-Object InterfaceDescription -match 'NCM|CDC'"
+        "Get-NetAdapter | Where-Object InterfaceDescription -match 'NCM|CDC|ITSZ'",
+        "Invoke-WebRequest http://192.168.4.1/api/status"
       ],
-      "expectedDriver": "USB NCM compatible network adapter"
+      "expectedDriver": "USB NCM compatible network adapter",
+      "expectedUrl": "http://192.168.4.1/"
     }
   }
 }
