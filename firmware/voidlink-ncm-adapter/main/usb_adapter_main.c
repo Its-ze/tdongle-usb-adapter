@@ -90,7 +90,7 @@ static esp_err_t root_get_handler(httpd_req_t *req)
         "@media(max-width:760px){.grid,.stats,.actions{grid-template-columns:1fr}button{width:100%}}"
         "</style></head><body><main>"
         "<header><p class=\"eyebrow\">USB network adapter UI</p><h1>VoidLink T-Deck Pairing</h1>"
-        "<p>This page is served by the T-Dongle over USB Ethernet. It is the pairing/control surface: no CyberDeck menu or separate T-Deck firmware screen is required for the computer-side setup.</p></header>"
+        "<p>This page is served by the T-Dongle over USB Ethernet. It is the pairing/control surface: no separate T-Deck firmware menu is required for the computer-side setup.</p></header>"
         "<section class=\"grid\"><article class=\"panel\"><p class=\"eyebrow\">Status</p><div class=\"stats\">"
         "<div class=\"stat\"><span>USB URL</span><strong>192.168.4.1</strong></div>"
         "<div class=\"stat\"><span>Mode</span><strong>Dongle web UI</strong></div>"

@@ -1,6 +1,6 @@
 {
   "name": "voidlink-ncm-adapter",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "target": "LilyGO T-Dongle S3 / ESP32-S3 native USB",
   "transport": "USB NCM",
   "status": "source-ready",
@@ -8,15 +8,15 @@
   "offsets": [
     {
       "offset": 0,
-      "path": "firmware/voidlink-ncm-adapter-0.2.0/bootloader.bin"
+      "path": "firmware/voidlink-ncm-adapter-0.2.1/bootloader.bin"
     },
     {
       "offset": 32768,
-      "path": "firmware/voidlink-ncm-adapter-0.2.0/partitions.bin"
+      "path": "firmware/voidlink-ncm-adapter-0.2.1/partitions.bin"
     },
     {
       "offset": 65536,
-      "path": "firmware/voidlink-ncm-adapter-0.2.0/firmware.bin"
+      "path": "firmware/voidlink-ncm-adapter-0.2.1/firmware.bin"
     }
   ],
   "files": []

@@ -1,8 +1,8 @@
 # VoidLink T-Dongle USB Adapter
 
-VoidLink is a separate public firmware/install project for turning a LilyGO T-Dongle S3 into a USB network adapter for deck work. It does not modify the existing NightGrid Cyberdeck, T-Deck Cyberdeck, or T-Dongle control-unit folders.
+VoidLink is a separate public firmware/install project for turning a LilyGO T-Dongle S3 into a USB network adapter for deck work. It does not depend on the older T-Dongle control-unit firmware path.
 
-The firmware target is an ESP32-S3 USB NCM adapter with a host-facing pairing web UI. When flashed, the dongle enumerates on Linux/Windows as a USB Ethernet-style interface instead of only a serial device, gives the computer an address over DHCP, and serves the pairing page at `http://192.168.4.1/`.
+The firmware target is an ESP32-S3 USB NCM adapter with a dongle-hosted T-Deck pairing web UI. When flashed, the dongle enumerates on Linux/Windows as a USB Ethernet-style interface instead of only a serial device, gives the computer an address over DHCP, and serves the pairing page at `http://192.168.4.1/`.
 
 VoidLink is the separate USB network-card build. Use this build when you want the computer to reach the T-Dongle through the USB network adapter and open the pairing/control page locally.
 
@@ -47,7 +47,7 @@ Then package the web installer files:
 
 ```powershell
 cd "F:\Dropbox\Dev Ops\T-Dongle USB Adapter"
-python .\tools\package_site.py --build-dir .\firmware\voidlink-ncm-adapter\build --site-dir .\site --version 0.2.0
+python .\tools\package_site.py --build-dir .\firmware\voidlink-ncm-adapter\build --site-dir .\site --version 0.2.1
 ```
 
 ## Linux Host Notes
@@ -71,6 +71,14 @@ Expected status endpoint:
 http://192.168.4.1/api/status
 ```
 
+The dongle page is the setup surface. It includes:
+
+- `Enable T-Deck support`
+- `Select T-Deck USB` through the browser Web Serial chooser
+- `Begin Pair`
+- `Confirm`
+- `Reset Pairing`
+
 ## Source Basis
 
-The firmware scaffold uses the ESP32-S3 TinyUSB device stack plus the `usb-netif` component so the dongle can run DHCP and HTTP directly over the USB network link. The local files are kept small and project-specific so the adapter can evolve into deck pairing/control without touching the older builds.
+The firmware uses the ESP32-S3 TinyUSB device stack plus the `usb-netif` component so the dongle can run DHCP and HTTP directly over the USB network link. The local files are kept small and project-specific so the adapter can evolve into T-Deck pairing/control without touching older builds.

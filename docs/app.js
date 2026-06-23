@@ -67,15 +67,18 @@ checkPairing?.addEventListener("click", async () => {
       `reachable: ${status.name || "VoidLink"} ${status.version || ""}`,
       `mode: ${status.mode || "unknown"}`,
       `url: ${status.url || "http://192.168.4.1/"}`,
+      `t-deck support: ${status.deckSupport?.enabled ? "enabled" : "disabled"}`,
+      `host usb selected: ${status.deckSupport?.hostUsbSelected ? "yes" : "no"}`,
       `pairing: ${paired}`,
       `display: ${status.displayState || "unknown"}`,
-      `next: ${status.nextAction || "open the local pairing UI"}`
+      `next: ${status.nextAction || "open the local dongle UI"}`
     ].join("\n");
   } catch (error) {
     pairingStatus.textContent = [
       "not reachable",
       "wait for the USB network adapter to finish connecting",
       "open: http://192.168.4.1/",
+      "the dongle page contains the T-Deck support and pairing buttons",
       "note: some browsers block HTTPS pages from checking local HTTP directly; opening the link is the real test",
       `error: ${error.message || "request failed"}`
     ].join("\n");

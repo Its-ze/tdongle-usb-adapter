@@ -2,10 +2,10 @@
   "schema": "https://its-ze.github.io/deck-pack.schema.v1.json",
   "id": "voidlink.tdongle.usb-adapter",
   "name": "VoidLink USB Adapter",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "visibility": "public",
   "publisher": "Its-ze",
-  "summary": "Turns a LilyGO T-Dongle S3 into a USB NCM adapter with a host-facing pairing page.",
+  "summary": "Turns a LilyGO T-Dongle S3 into a USB NCM adapter with a dongle-hosted T-Deck pairing page.",
   "hardware": [
     "LilyGO T-Dongle S3",
     "ESP32-S3 native USB boards"
@@ -49,7 +49,7 @@
           "deck.remote-open",
           "deck.discovery"
         ],
-        "description": "External pack for the T-Dongle USB NCM virtual adapter and host pairing UI."
+        "description": "External pack for the T-Dongle USB NCM virtual adapter and dongle-hosted T-Deck pairing UI."
       }
     ]
   },

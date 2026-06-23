@@ -7,8 +7,8 @@
     {
       "id": "voidlink.tdongle.usb-adapter",
       "name": "VoidLink USB Adapter",
-      "version": "0.2.0",
-      "summary": "USB NCM adapter firmware for LilyGO T-Dongle S3 with a local pairing UI.",
+      "version": "0.2.1",
+      "summary": "USB NCM adapter firmware for LilyGO T-Dongle S3 with a dongle-hosted T-Deck pairing UI.",
       "pack": "https://its-ze.github.io/tdongle-usb-adapter/deck/voidlink.pack.json",
       "install": "https://its-ze.github.io/tdongle-usb-adapter/"
     }
